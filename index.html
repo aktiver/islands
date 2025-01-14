@@ -2,18 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Island-Based To-Do App</title>
-  <!-- Load Material UI CSS (or your favorite CSS framework) -->
-  <link rel="stylesheet" href="https://unpkg.com/@mui/material@latest/dist/material.min.css">
-  
-  <!-- Our custom styles for transitions and floating header -->
+  <title>Island-Based Todo w/ Material UI Demo</title>
+
+  <!-- Lodash and Axios from CDNs -->
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4/lodash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Material UI–like + Custom Styles -->
   <style>
+    /* Basic Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Roboto", sans-serif;
+      background-color: #f5f5f5;
+      /* Adjust body width/padding for the demo */
+      min-height: 100vh;
+      margin: 0;
+      padding: 70px 0; /* top space for header */
+    }
+
     /* Floating Header */
     #floatingHeader {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       height: 60px;
       background-color: #1976d2; /* Material UI primary color */
       color: white;
@@ -26,13 +42,6 @@
     }
     #renderTime {
       font-weight: bold;
-    }
-
-    /* Add some space for the header */
-    body {
-      padding-top: 70px; 
-      margin: 0;
-      font-family: Roboto, sans-serif;
     }
 
     /* Card-like container for the Todo List */
@@ -53,25 +62,334 @@
       from { opacity: 0; transform: translateY(-5px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    h5 {
+      margin: 30px 0 20px 0;
+      border-bottom: 1px solid #000;
+      background-color:#ccc;
+      padding: 5px 10px;
+    }
+
+    #last {
+      width:100%;
+      height:250px;
+    }
+
+    /* Material-like input container */
+    .input-container {
+      position: relative;
+      width: 300px;
+      margin: 20px;
+    }
+    .input-container input {
+      width: 100%;
+      padding: 14px 0 6px 0;
+      border: none;
+      border-bottom: 1px solid #757575;
+      background: transparent;
+      font-size: 16px;
+      color: #333;
+      transition: border-bottom-color 0.3s ease;
+    }
+    .input-container input:focus {
+      outline: none;
+      border-bottom-color: #3f51b5; /* Primary color */
+    }
+    .input-container label {
+      position: absolute;
+      top: 14px;
+      left: 0;
+      font-size: 18px;
+      color: #757575;
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+    .input-container input:focus + label,
+    .input-container input:not(:placeholder-shown) + label {
+      top: -8px;
+      font-size: 14px;
+      color: #3f51b5; /* Primary color */
+    }
+    .input-container .underline {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background-color: #3f51b5; /* Primary color */
+      transition: width 0.3s ease;
+    }
+    .input-container input:focus ~ .underline {
+      width: 100%;
+    }
+    .input-container input::placeholder {
+      color: transparent;
+    }
+
+    /* Toggle Container */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      margin: 20px;
+    }
+    .toggle-checkbox {
+      display: none;
+    }
+    .toggle-label {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background-color: #ccc;
+      border-radius: 12px;
+      transition: background-color 0.3s ease;
+      margin-right: 10px;
+    }
+    .toggle-ball {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background-color: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .toggle-checkbox:checked + .toggle-label {
+      background-color: #3f51b5; /* Primary color */
+    }
+    .toggle-checkbox:checked + .toggle-label .toggle-ball {
+      transform: translateX(26px);
+    }
+    .toggle-text {
+      font-size: 16px;
+      color: #333;
+    }
+    .toggle-checkbox:focus + .toggle-label {
+      box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.3);
+    }
+    .toggle-label:hover {
+      background-color: #bdbdbd;
+    }
+    .toggle-checkbox:checked + .toggle-label:hover {
+      background-color: #303f9f;
+    }
+
+    /* Star Rating */
+    .star {
+      color: #ccc;
+      font-size: 24px;
+      margin-left: 10px;
+    }
+    .star:hover {
+      cursor: pointer;
+    }
+    .star-filled {
+      color: #3f51b5;
+      position: absolute; 
+      top: 0;
+      left: 0;
+      width: 0%;
+      overflow: hidden;
+    }
+
+    /* Select Box */
+    .select-container {
+      position: relative;
+      width: 250px;
+      margin: 20px;
+    }
+    .select-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 16px;
+      color: #333;
+    }
+    .select-box {
+      position: relative;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 12px 40px 12px 12px;
+      background-color: #fff;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .select-box:focus {
+      outline: none;
+      border-color: #3f51b5;
+      box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.2);
+    }
+    .selected-option {
+      font-size: 16px;
+      color: #333;
+    }
+    .arrow {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%) rotate(0deg);
+      width: 24px;
+      height: 24px;
+      fill: #757575;
+      transition: transform 0.3s ease;
+    }
+    .select-box.active .arrow {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    .options {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      max-height: 0;
+      overflow: hidden;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+      background-color: #fff;
+      transition: max-height 0.3s ease;
+      z-index: 1000;
+    }
+    .select-box.active + .options {
+      max-height: 200px; /* Adjust as needed */
+      overflow-y: auto;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .option {
+      padding: 12px;
+      font-size: 16px;
+      color: #333;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .option:hover {
+      background-color: #f0f0f0;
+    }
+    .option[aria-selected="true"] {
+      background-color: #3f51b5;
+      color: #fff;
+    }
+    .option[aria-selected="true"]:hover {
+      background-color: #303f9f;
+    }
+
+    /* Slider */
+    .slider-container {
+      width: 400px;
+      background-color: #fff;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      margin: 20px;
+    }
+    .slider-label {
+      display: block;
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+    .slider-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #d3d3d3;
+      outline: none;
+      transition: background 0.3s ease;
+      position: relative;
+      z-index: 2;
+    }
+    .slider:hover {
+      background: #c1c1c1;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: #3f51b5;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 3;
+    }
+    .slider::-moz-range-thumb {
+      width: 24px; height: 24px;
+      border: none;
+      border-radius: 50%;
+      background: #3f51b5;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 3;
+    }
+    .slider::-webkit-slider-thumb:hover {
+      background: #303f9f;
+      transform: scale(1.1);
+    }
+    .slider::-moz-range-thumb:hover {
+      background: #303f9f;
+      transform: scale(1.1);
+    }
+    .slider:active::-webkit-slider-thumb {
+      background: #283593;
+      transform: scale(1.2);
+    }
+    .slider:active::-moz-range-thumb {
+      background: #283593;
+      transform: scale(1.2);
+    }
+    .slider-value {
+      position: absolute;
+      top: -35px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #3f51b5;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      white-space: nowrap;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      opacity: 0;
+    }
+    .slider-wrapper.active .slider-value {
+      opacity: 1;
+    }
+    .slider-gradient {
+      position: absolute;
+      top: 8px;
+      width: 0%;
+      height: 6px;
+      background: linear-gradient(90deg, purple, aqua, orange);
+      border-radius: 4px;
+      pointer-events: none;
+      transition: width 0.3s ease;
+      z-index: 3;
+    }
+
   </style>
 </head>
-
 <body>
+
   <!-- Floating Header -->
   <div id="floatingHeader">
-    <span>Todo App - Assigned to <span id="assignedUser"></span></span>
+    <span>Todo App - Assigned to <span id="assignedUser">DemoUser</span></span>
     <span id="renderTime">Last Render: 0ms</span>
   </div>
 
   <!-- Our Island for the Todo List -->
   <div data-island class="todo-container" id="todoIsland">
-    <!-- We'll define the initial :state with an array of tasks + user info -->
-    <div :state="{ 
-      tasks: [],
-      assignedUser: 'Jane Doe',
-      lastRender: 0
-    }">
-
+    <div :state='{"tasks":[],"assignedUser":"Jane Doe","lastRender":0}'>
       <h2>Todo List</h2>
 
       <!-- Add new task form -->
@@ -79,7 +397,6 @@
         <input
           type="text"
           placeholder="Task Title"
-          :show="true"
           id="taskTitle"
           class="form-control"
           style="margin: 0.5rem 0;"
@@ -110,93 +427,418 @@
     </div>
   </div>
 
-  <!-- Load Lodash, Axios, and the island code (the code from your snippet) -->
-  <script src="https://cdn.jsdelivr.net/npm/lodash@4/lodash.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Some extra Material UI–like components for demo -->
+  <h5>Input box</h5>
+  <div class="input-container">
+    <input type="text" id="material-input" required placeholder=" " />
+    <label for="material-input">Your Task</label>
+    <span class="underline"></span>
+  </div>
 
-  <!-- Insert your big <script type="module"> snippet with islands, signals, etc. here -->
-  <script type="module" src="./islands.js"></script>
+  <h5>Toggle</h5>
+  <div class="toggle-container">
+    <input type="checkbox" id="material-toggle" class="toggle-checkbox">
+    <label for="material-toggle" class="toggle-label">
+      <span class="toggle-ball"></span>
+    </label>
+    <span class="toggle-text">Toggle Option</span>
+  </div>
 
-  <!-- Next, define our custom logic for the to-do app -->
-  <script type="module">
-    import { islands } from './islands.js';
-    import _ from 'lodash';
+  <h5>Star Rating</h5>
+  <span class="star" data-value="1" role="radio" aria-checked="false" tabindex="0">
+    &#9734; <!-- outline star -->
+  </span>
 
-    // We can define custom code or methods by hooking into the island's signals or events.
-    // The easiest approach: We'll define an "addTask()" function or similar inline in the code.
+  <h5>Select Box</h5>
+  <div class="select-container">
+    <label for="custom-select" class="select-label">Choose an option</label>
+    <div class="select-box" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="custom-select">
+      <span class="selected-option">Select...</span>
+      <svg class="arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M7 10l5 5 5-5H7z"/>
+      </svg>
+    </div>
+    <ul class="options" role="listbox" aria-labelledby="custom-select">
+      <li class="option" role="option" tabindex="0">Option 1</li>
+      <li class="option" role="option" tabindex="0">Option 2</li>
+      <li class="option" role="option" tabindex="0">Option 3</li>
+      <li class="option" role="option" tabindex="0">Option 4</li>
+    </ul>
+  </div>
 
-    // We can also augment the island by providing it with custom methods to call from @click="..."
-    const todoRoot = document.getElementById('todoIsland');
-    const todoIsland = islands.get(todoRoot);
+  <h5>Slider</h5>
+  <div class="slider-container">
+    <label for="material-slider" class="slider-label">Select Value</label>
+    <div class="slider-wrapper">
+      <input type="range" id="material-slider" class="slider" min="0" max="100" step="1" value="50" aria-label="Value Slider">
+      <span class="slider-value" id="slider-value">50</span>
+      <div class="slider-gradient" id="slider-gradient"></div>
+    </div>
+  </div>
 
-    // We add a method "addTask()" to the island's signals, or we can do it dynamically as code strings.
-    // Here, we do it imperatively for clarity:
-    function addTaskMethod(signals, { $ev }) {
-      const titleEl = document.getElementById('taskTitle');
-      const descEl = document.getElementById('taskDesc');
-      const startDate = document.getElementById('startDate').value;
-      const endDate = document.getElementById('endDate').value;
+  <div id="last"></div>
 
-      const newTask = {
-        id: Date.now(),
-        title: titleEl.value.trim() || 'Untitled',
-        description: descEl.value.trim(),
-        startDate,
-        endDate,
-        completed: false,
-      };
+  <!-- Island-based code (no imports) -->
+  <script>
+    /**************************************
+     * Lenses
+     **************************************/
+    const lensProp = (prop) => ({
+      get: (obj) => _.get(obj, prop),
+      set: (val, obj) => {
+        const clone = _.cloneDeep(obj);
+        _.set(clone, prop, val);
+        return clone;
+      },
+    });
 
-      // We'll push it into signals.tasks (which is a Signal).
-      signals.tasks.set((oldArr) => [...oldArr, newTask]);
+    const lensPath = (path) => ({
+      get: (obj) => _.get(obj, path),
+      set: (val, obj) => {
+        const clone = _.cloneDeep(obj);
+        _.set(clone, path, val);
+        return clone;
+      },
+    });
 
-      // Clear inputs
-      titleEl.value = '';
-      descEl.value = '';
-      document.getElementById('startDate').value = '';
-      document.getElementById('endDate').value = '';
+    const styleDisplayLens = {
+      get: (el) => el.style.display,
+      set: (val, el) => {
+        if (el.style.display !== val) el.style.display = val;
+        return el;
+      },
+    };
 
-      // Force a re-render so we can measure times, etc.
-      updateRenderTime(signals);
+    const innerHtmlLens = {
+      get: (el) => el.innerHTML,
+      set: (val, el) => {
+        if (el.innerHTML !== val) el.innerHTML = val;
+        return el;
+      },
+    };
+
+    /**************************************
+     * Signal
+     **************************************/
+    class Signal {
+      constructor(initialVal) {
+        this.val = initialVal;
+        this.deps = [];
+      }
+      set(updater) {
+        const oldVal = this.val;
+        const newVal = _.isFunction(updater) ? updater(oldVal) : updater;
+        if (_.isEqual(newVal, oldVal)) return;
+        this.val = newVal;
+        _.forEach(this.deps, (f) => f());
+      }
     }
 
-    // We'll define it as a code string so the user can do: @click="addTask()"
-    // But let's just attach it to the island signals for convenience:
-    todoIsland.signals.addTask = {
-      set(fn) { /* No-op, just so it doesn't break. */ }
-    };
-    // We'll emulate the "call" style:
-    todoIsland.signals.addTask.call = (signals, ev) => addTaskMethod(signals, ev);
+    /**************************************
+     * Island Management
+     **************************************/
+    const islands = new WeakMap();
 
-    // We also define a "renderTasks" computed property in the island, for :html="renderTasks"
-    todoIsland.signals.renderTasks = {
-      val: '',
-      deps: [],
-      set() { /* no-op */ }
-    };
+    // parseMethodCall - for "toggleDone(123)"
+    function parseMethodCall(str = "") {
+      const match = str.match(/^(\w+)\s*\((.*)\)\s*$/);
+      if (!match) return { methodName: str.trim(), args: [] };
+      const methodName = match[1].trim();
+      const argsStr = match[2].trim();
+      if (!argsStr) return { methodName, args: [] };
+      const rawArgs = argsStr.split(",").map(s => s.trim());
+      return { methodName, args: rawArgs };
+    }
 
-    // We'll store our rendering logic in a function
-    function getRenderTasksHTML(tasks) {
-      if (!tasks || tasks.length === 0) {
-        return '<p>No tasks yet.</p>';
+    function createFragmentFromHTML(html) {
+      const frag = document.createDocumentFragment();
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      while (temp.firstChild) {
+        frag.appendChild(temp.firstChild);
       }
-      // Build HTML for each task
-      return tasks.map(task => {
-        const daysLeft = computeDaysLeft(task.startDate, task.endDate);
-        return `
+      return frag;
+    }
+
+    function doFetch(island, el, { url, method, to }) {
+      const needsPayload = ["INPUT", "BUTTON"].includes(el.tagName);
+      const payload = needsPayload ? { [el.name]: el.value } : {};
+      const requestConfig = { method, url, data: payload };
+
+      const fetchTask = () => {
+        axios.request(requestConfig).then((resp) => {
+          if (!to) return;
+          const html = resp.data;
+          if (to === "el") {
+            innerHtmlLens.set(html, el);
+            island.rebind(el);
+          } else {
+            const parents = document.querySelectorAll(to.target);
+            _.forEach(parents, (p) => {
+              if (p.innerHTML === html && to.swap === "replace") return;
+              switch (to.swap) {
+                case "prepend":
+                  p.insertBefore(createFragmentFromHTML(html), p.firstChild);
+                  break;
+                case "append":
+                  p.appendChild(createFragmentFromHTML(html));
+                  break;
+                default:
+                  p.replaceChildren(createFragmentFromHTML(html));
+              }
+              island.rebind(p);
+            });
+          }
+        });
+      };
+
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(fetchTask);
+      } else {
+        setTimeout(fetchTask, 0);
+      }
+    }
+
+    function onEvent(ev) {
+      const islandRoot = ev.target.closest("[data-island]");
+      if (!islandRoot) return;
+      const island = islands.get(islandRoot);
+      if (!island) return;
+
+      const { getConfigs } = island;
+      const configs = getConfigs(ev);
+      if (_.isEmpty(configs)) return;
+
+      _.forEach(configs, (cfg) => {
+        if (cfg.before) {
+          const { methodName, args } = parseMethodCall(cfg.before);
+          const beforeFn = island.methods[methodName];
+          if (beforeFn) {
+            const canRun = beforeFn(island.signals, { $ev: ev }, ...args);
+            if (!canRun) return;
+          }
+        }
+
+        if (cfg.method && cfg.url) {
+          doFetch(island, ev.target, cfg);
+        } else if (cfg.code) {
+          const { methodName, args } = parseMethodCall(cfg.code);
+          const fn = island.methods[methodName];
+          if (fn) {
+            fn(island.signals, { $ev: ev }, ...args);
+          } else {
+            console.warn(`Method ${methodName} not found in island.methods`, island.methods);
+          }
+        }
+      });
+    }
+
+    function parseEventConfigs(ev) {
+      const { type, target, key } = ev;
+      const attrKey = type === "keyup" ? `@${(key || "").toLowerCase()}` : `@${type}`;
+      const attrVal = target.getAttribute(attrKey);
+      if (!attrVal) return [];
+      const before = target.getAttribute("before");
+      if (_.includes(attrVal, ":/")) {
+        const [method, url] = attrVal.split(":");
+        const toAttr = _.find([...target.attributes], (x) => x.name.startsWith("to"));
+        let cfg = { method, url, before };
+        if (toAttr) {
+          const [_, maybeSwap] = toAttr.name.split(":");
+          cfg.to = { swap: maybeSwap || "replace", target: toAttr.value };
+        }
+        return [cfg];
+      }
+      return [{ code: attrVal, before }];
+    }
+
+    function bindDataAttr(island, el, attr) {
+      // e.g. :html="renderTasks" => key="renderTasks", bindingType="html"
+      const key = attr.value.trim();
+      const bindingType = attr.name.slice(1);
+
+      const update = () => {
+        const sig = island.signals[key];
+        const val = sig ? sig.val : null;
+        switch (bindingType) {
+          case "show":
+            styleDisplayLens.set(val ? "" : "none", el);
+            break;
+          case "html":
+            innerHtmlLens.set(val, el);
+            break;
+          default:
+            const current = el.getAttribute(bindingType);
+            const newStr = String(val ?? "");
+            if (current !== newStr) {
+              el.setAttribute(bindingType, newStr);
+            }
+        }
+      };
+
+      let _tempReg = update;
+      if (island.signals[key]) {
+        island.signals[key].deps.push(() => _tempReg && _tempReg());
+      }
+      _tempReg(); 
+      _tempReg = null;
+    }
+
+    function createIsland(rootEl) {
+      let signals = {};
+      function gatherState(el) {
+        const st = el.getAttribute(":state");
+        if (!st) return {};
+        const parsed = JSON.parse(st);
+        return _.mapValues(parsed, (val) => new Signal(val));
+      }
+
+      const childStates = rootEl.querySelectorAll("[data-island] [\\:state]");
+      const allElems = [rootEl, ...childStates];
+      _.forEach(allElems, (elem) => {
+        const part = gatherState(elem);
+        _.forOwn(part, (v, k) => {
+          if (!signals[k]) signals[k] = v;
+        });
+      });
+
+      let methods = {};
+
+      const rebind = (subRoot) => {
+        const items = subRoot.querySelectorAll("[\\:state], [\\@], [\\:]");
+        _.forEach(items, (el) => {
+          if (el.hasAttribute(":state")) {
+            const part = gatherState(el);
+            _.forOwn(part, (v, k) => {
+              if (!signals[k]) signals[k] = v;
+            });
+          }
+          _.forEach(el.attributes, (attr) => {
+            if (attr.name.startsWith(":")) {
+              bindDataAttr(island, el, attr);
+            }
+          });
+        });
+      };
+
+      const bindEvents = () => {
+        rootEl.addEventListener("click", onEvent, true);
+        rootEl.addEventListener("keyup", onEvent, true);
+      };
+
+      let regFn = null;
+      const proxySignals = new Proxy({}, {
+        get(_, prop) {
+          if (typeof prop === "symbol") return;
+          const sig = signals[prop];
+          if (regFn && sig) sig.deps.push(regFn);
+          return sig;
+        },
+        set() { return true; }
+      });
+
+      const island = {
+        rootEl,
+        signals: proxySignals,
+        methods, 
+        rebind: (el) => rebind(el || rootEl),
+        bindEvents,
+        getConfigs: parseEventConfigs,
+      };
+      return island;
+    }
+
+    function initIslands() {
+      const islandRoots = document.querySelectorAll("[data-island]");
+      _.forEach(islandRoots, (rootEl) => {
+        const island = createIsland(rootEl);
+        islands.set(rootEl, island);
+        island.rebind(rootEl);
+        island.bindEvents();
+      });
+    }
+
+    function init() {
+      const initTask = () => initIslands();
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(initTask);
+      } else {
+        setTimeout(initTask, 0);
+      }
+    }
+    init();
+
+    // Expose if needed
+    window.App = { islands };
+
+    /**************************************
+     * After DOMContentLoaded, define our Todo methods
+     **************************************/
+    document.addEventListener('DOMContentLoaded', () => {
+      const todoRoot = document.getElementById('todoIsland');
+      const todoIsland = islands.get(todoRoot);
+      if (!todoIsland) return;
+
+      // 1) Attach your methods:
+      todoIsland.methods.addTask = (signals) => {
+        const title = document.getElementById('taskTitle').value;
+        const desc = document.getElementById('taskDesc').value;
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const newTask = {
+          id: Date.now(),
+          title: title || 'Untitled',
+          description: desc,
+          startDate: start,
+          endDate: end,
+          completed: false
+        };
+        signals.tasks.set(old => [...old, newTask]);
+
+        // Clear fields
+        document.getElementById('taskTitle').value = '';
+        document.getElementById('taskDesc').value = '';
+        document.getElementById('startDate').value = '';
+        document.getElementById('endDate').value = '';
+
+        updateRenderTime(signals);
+      };
+
+      todoIsland.methods.toggleDone = (signals, ev, taskId) => {
+        signals.tasks.set(oldArr => oldArr.map(t => {
+          if (String(t.id) === String(taskId)) {
+            return { ...t, completed: !t.completed };
+          }
+          return t;
+        }));
+        updateRenderTime(signals);
+      };
+
+      todoIsland.methods.deleteTask = (signals, ev, taskId) => {
+        signals.tasks.set(oldArr => oldArr.filter(t => String(t.id) !== String(taskId)));
+        updateRenderTime(signals);
+      };
+
+      // 2) Provide "renderTasks" as a normal signal for :html
+      const tasksSig = todoIsland.signals.tasks;
+      const renderTasksSig = todoIsland.signals.renderTasks = new Signal("");
+
+      tasksSig.deps.push(() => {
+        const tasks = tasksSig.val || [];
+        if (!tasks.length) {
+          renderTasksSig.set('<p>No tasks yet.</p>');
+          return;
+        }
+        const html = tasks.map(task => `
           <div class="mui-panel fade-in" style="margin:0.5rem 0;">
             <h3>${_.escape(task.title)} ${task.completed ? '(Done)' : ''}</h3>
             <p>${_.escape(task.description)}</p>
-            <p>Start: ${task.startDate || 'N/A'} | Due: ${task.endDate || 'N/A'}
-              <br/>
-              <em style="color:${daysLeft < 2 ? 'red' : 'inherit'}">
-                ${daysLeft > 0 ? daysLeft + ' days left' : 'Due date passed'}
-              </em>
-            </p>
+            <p>Start: ${task.startDate || 'N/A'} | Due: ${task.endDate || 'N/A'}</p>
             <button
               class="mui-btn mui-btn--small mui-btn--accent"
               @click="toggleDone(${task.id})"
             >
-              ${task.completed ? 'Mark Undone' : 'Mark Done'}
+              ${task.completed ? 'Undo' : 'Done'}
             </button>
             <button
               class="mui-btn mui-btn--small mui-btn--flat"
@@ -205,98 +847,37 @@
               Delete
             </button>
           </div>
-        `;
-      }).join('');
-    }
-
-    function computeDaysLeft(start, end) {
-      if (!start || !end) return '??';
-      const startTime = new Date(start).getTime();
-      const endTime = new Date(end).getTime();
-      const now = Date.now();
-
-      // If already ended, show negative or 0
-      if (now > endTime) return 0;
-
-      // Compute difference in days
-      const diff = endTime - now;
-      return Math.ceil(diff / (1000 * 60 * 60 * 24));
-    }
-
-    // We'll define a "toggleDone" and "deleteTask" in a similar style
-    function toggleDone(signals, { $ev }, id) {
-      signals.tasks.set((oldArr) => {
-        return oldArr.map(task => {
-          if (task.id === id) {
-            return { ...task, completed: !task.completed };
-          }
-          return task;
-        });
+        `).join('');
+        renderTasksSig.set(html);
+        updateRenderTime(todoIsland.signals);
       });
-      updateRenderTime(signals);
-    }
 
-    function deleteTask(signals, { $ev }, id) {
-      signals.tasks.set(oldArr => oldArr.filter(t => t.id !== id));
-      updateRenderTime(signals);
-    }
-
-    // We'll store these methods so the island can call them from HTML (@click="toggleDone(123)")
-    todoIsland.signals.toggleDone = { call: (signals, ev, id) => toggleDone(signals, ev, id) };
-    todoIsland.signals.deleteTask = { call: (signals, ev, id) => deleteTask(signals, ev, id) };
-
-    // Next, let's define a small reactivity for "renderTasks"
-    // We'll manually add a dep so that any changes to tasks will update "renderTasks".
-    // Then the island sees tasks changed => triggers deps => re-computes HTML => sets into val => :html="renderTasks" re-renders
-    const oldGet = todoIsland.signals.renderTasks.get || (() => '');
-    todoIsland.signals.renderTasks.get = () => {
-      const tasksSignal = todoIsland.signals.tasks;
-      if (tasksSignal) { 
-        // register the dep
-        tasksSignal.deps.push(() => {
-          const newVal = getRenderTasksHTML(tasksSignal.val);
-          todoIsland.signals.renderTasks.val = newVal;
-          updateRenderTime(todoIsland.signals);
+      // 3) Also watch assignedUser
+      const userSig = todoIsland.signals.assignedUser;
+      if (userSig) {
+        userSig.deps.push(() => {
+          document.getElementById('assignedUser').textContent = userSig.val;
         });
-        // Return initial HTML
-        return getRenderTasksHTML(tasksSignal.val);
-      }
-      return oldGet();
-    };
-
-    // We'll set the initial val so that it's not empty
-    todoIsland.signals.renderTasks.val = '<p>No tasks yet.</p>';
-
-    // Also watch "assignedUser"
-    // We'll set the floating header #assignedUser text
-    const userSig = todoIsland.signals.assignedUser;
-    if (userSig) {
-      userSig.deps.push(() => {
         document.getElementById('assignedUser').textContent = userSig.val;
-      });
-      document.getElementById('assignedUser').textContent = userSig.val;
-    }
+      }
 
-    // Finally, track and display render times
-    function updateRenderTime(signals) {
-      const start = performance.now();
-      // We'll do a quick re-bind or re-compute triggers
-      // Typically, the framework calls the reactivity automatically.
-      // We can measure the time after the next microtask:
-      Promise.resolve().then(() => {
-        const end = performance.now();
-        const ms = Math.round(end - start);
-        signals.lastRender.set(ms);
-      });
-    }
-
-    // Listen for changes to lastRender
-    if (todoIsland.signals.lastRender) {
-      todoIsland.signals.lastRender.deps.push(() => {
-        document.getElementById('renderTime').textContent = 'Last Render: ' + todoIsland.signals.lastRender.val + 'ms';
-      });
-    }
-
+      // 4) lastRender approach
+      function updateRenderTime(signals) {
+        const start = performance.now();
+        Promise.resolve().then(() => {
+          const end = performance.now();
+          const ms = Math.round(end - start);
+          if (signals.lastRender) signals.lastRender.set(ms);
+        });
+      }
+      const renderSig = todoIsland.signals.lastRender;
+      if (renderSig) {
+        renderSig.deps.push(() => {
+          document.getElementById('renderTime').textContent = 
+            'Last Render: ' + renderSig.val + 'ms';
+        });
+      }
+    });
   </script>
 </body>
 </html>
